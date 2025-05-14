@@ -3,25 +3,30 @@ dotenv.config();
 
 export default {
   development: {
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASS || 'postgres',
+    database: process.env.DB_NAME || 'mscg_db',
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    dialect: "postgres",
+    logging: false
+  },
+  test: {
     username: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    dialect: "postgres"
-  },
-  test: {
-    username: "root",
-    password: null,
-    database: "database_test",
-    host: "127.0.0.1",
-    dialect: "mysql"
+    dialect: "postgres",
+    logging: false
   },
   production: {
-    username: "root",
-    password: null,
-    database: "database_production",
-    host: "127.0.0.1",
-    dialect: "mysql"
+    username: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    dialect: "postgres",
+    logging: false
   }
 }; 
