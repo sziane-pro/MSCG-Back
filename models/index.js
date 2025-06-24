@@ -33,11 +33,15 @@ const SupplData = SupplDataModel(sequelize);
 // User_Possess_Society (0,1 - 1,1)
 User.belongsToMany(Society, { 
   through: 'User_Possess_Society',
-  timestamps: true
+  timestamps: true,
+  foreignKey: 'id_User',
+  otherKey: 'id_Society'
 });
 Society.belongsToMany(User, { 
   through: 'User_Possess_Society',
-  timestamps: true
+  timestamps: true,
+  foreignKey: 'id_Society',
+  otherKey: 'id_User'
 });
 
 // User_Concil_Society (0,n - 0,n)

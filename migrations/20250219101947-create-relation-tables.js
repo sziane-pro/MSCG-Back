@@ -3,7 +3,7 @@ export async function up(queryInterface, Sequelize) {
   await queryInterface.createTable('User_Possess_Society', {
     UserId: {
       type: Sequelize.INTEGER,
-      references: { model: 'Users', key: 'id_User' },
+      references: { model: 'Users', key: 'id' },
       onDelete: 'CASCADE',
     },
     SocietyId: {
@@ -25,7 +25,7 @@ export async function up(queryInterface, Sequelize) {
   await queryInterface.createTable('User_Concil_Society', {
     UserId: {
       type: Sequelize.INTEGER,
-      references: { model: 'Users', key: 'id_User' },
+      references: { model: 'Users', key: 'id' },
       onDelete: 'CASCADE',
     },
     SocietyId: {
@@ -135,7 +135,7 @@ export async function up(queryInterface, Sequelize) {
   await queryInterface.createTable('User_Possess_Chiffre', {
     UserId: {
       type: Sequelize.INTEGER,
-      references: { model: 'Users', key: 'id_User' },
+      references: { model: 'Users', key: 'id' },
       onDelete: 'CASCADE',
     },
     SupplDataId: {
