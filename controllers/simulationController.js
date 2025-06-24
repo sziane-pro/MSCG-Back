@@ -1,80 +1,62 @@
-import { Simulation, Exercice, Society, User, JuryStatus, SupplData } from '../models/index.js';
+import { Simulation, User } from '../models/index.js';
 
 // Créer une nouvelle simulation
 export const createSimulation = async (req, res) => {
   try {
-    const { CA_HT, exerciceId } = req.body;
+    const { nom, ca, revenuNet, statut = 'En cours' } = req.body;
     const userId = req.user.userId;
 
-    // Vérifier si l'exercice existe et si l'utilisateur y a accès
-    const exercice = await Exercice.findOne({
-      where: { id_Exercice: exerciceId },
-      include: [{
-        model: Society,
-        include: [{
-          model: User,
-          where: { id_User: userId },
-          through: { attributes: [] }
-        }]
-      }]
-    });
-
-    if (!exercice) {
-      return res.status(404).json({ message: 'Exercice non trouvé ou accès non autorisé' });
+    // Validation des données
+    if (!nom) {
+      return res.status(400).json({ message: 'Le nom de la simulation est requis.' });
     }
 
-    const simulation = await Simulation.create({ CA_HT });
-    await simulation.addExercice(exercice);
+    const simulation = await Simulation.create({
+      nom,
+      statut,
+      ca,
+      revenuNet,
+      userId
+    });
 
     return res.status(201).json({
       message: 'Simulation créée avec succès',
-      simulation
+      simulation: {
+        id: simulation.id,
+        nom: simulation.nom,
+        statut: simulation.statut,
+        date: simulation.createdAt.toISOString().split('T')[0], // Format YYYY-MM-DD
+        ca: simulation.ca,
+        revenuNet: simulation.revenuNet
+      }
     });
   } catch (error) {
-    return res.status(500).json({
-      message: 'Erreur lors de la création de la simulation',
-      error: error.message
-    });
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
-// Obtenir toutes les simulations d'un exercice
-export const getExerciceSimulations = async (req, res) => {
+// Obtenir toutes les simulations de l'utilisateur connecté
+export const getUserSimulations = async (req, res) => {
   try {
-    const { exerciceId } = req.params;
     const userId = req.user.userId;
 
     const simulations = await Simulation.findAll({
-      include: [
-        {
-          model: Exercice,
-          where: { id_Exercice: exerciceId },
-          include: [{
-            model: Society,
-            include: [{
-              model: User,
-              where: { id_User: userId },
-              through: { attributes: [] }
-            }]
-          }]
-        },
-        {
-          model: JuryStatus,
-          through: { attributes: [] }
-        },
-        {
-          model: SupplData,
-          through: { attributes: [] }
-        }
-      ]
+      where: { userId },
+      order: [['createdAt', 'DESC']]
     });
 
-    return res.json(simulations);
+    const formattedSimulations = simulations.map(sim => ({
+      id: sim.id,
+      nom: sim.nom,
+      statut: sim.statut,
+      date: sim.createdAt.toISOString().split('T')[0], // Format YYYY-MM-DD
+      ca: sim.ca,
+      revenuNet: sim.revenuNet
+    }));
+
+    return res.json(formattedSimulations);
   } catch (error) {
-    return res.status(500).json({
-      message: 'Erreur lors de la récupération des simulations',
-      error: error.message
-    });
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
@@ -85,40 +67,23 @@ export const getSimulation = async (req, res) => {
     const userId = req.user.userId;
 
     const simulation = await Simulation.findOne({
-      where: { id_Simulation: id },
-      include: [
-        {
-          model: Exercice,
-          include: [{
-            model: Society,
-            include: [{
-              model: User,
-              where: { id_User: userId },
-              through: { attributes: [] }
-            }]
-          }]
-        },
-        {
-          model: JuryStatus,
-          through: { attributes: [] }
-        },
-        {
-          model: SupplData,
-          through: { attributes: [] }
-        }
-      ]
+      where: { id, userId }
     });
 
     if (!simulation) {
       return res.status(404).json({ message: 'Simulation non trouvée' });
     }
 
-    return res.json(simulation);
-  } catch (error) {
-    return res.status(500).json({
-      message: 'Erreur lors de la récupération de la simulation',
-      error: error.message
+    return res.json({
+      id: simulation.id,
+      nom: simulation.nom,
+      statut: simulation.statut,
+      date: simulation.createdAt.toISOString().split('T')[0],
+      ca: simulation.ca,
+      revenuNet: simulation.revenuNet
     });
+  } catch (error) {
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
@@ -126,39 +91,37 @@ export const getSimulation = async (req, res) => {
 export const updateSimulation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { CA_HT } = req.body;
+    const { nom, ca, revenuNet, statut } = req.body;
     const userId = req.user.userId;
 
     const simulation = await Simulation.findOne({
-      where: { id_Simulation: id },
-      include: [{
-        model: Exercice,
-        include: [{
-          model: Society,
-          include: [{
-            model: User,
-            where: { id_User: userId },
-            through: { attributes: [] }
-          }]
-        }]
-      }]
+      where: { id, userId }
     });
 
     if (!simulation) {
       return res.status(404).json({ message: 'Simulation non trouvée' });
     }
 
-    await simulation.update({ CA_HT });
+    await simulation.update({
+      nom: nom || simulation.nom,
+      statut: statut || simulation.statut,
+      ca: ca || simulation.ca,
+      revenuNet: revenuNet || simulation.revenuNet
+    });
 
     return res.json({
       message: 'Simulation mise à jour avec succès',
-      simulation
+      simulation: {
+        id: simulation.id,
+        nom: simulation.nom,
+        statut: simulation.statut,
+        date: simulation.createdAt.toISOString().split('T')[0],
+        ca: simulation.ca,
+        revenuNet: simulation.revenuNet
+      }
     });
   } catch (error) {
-    return res.status(500).json({
-      message: 'Erreur lors de la mise à jour de la simulation',
-      error: error.message
-    });
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
@@ -169,18 +132,7 @@ export const deleteSimulation = async (req, res) => {
     const userId = req.user.userId;
 
     const simulation = await Simulation.findOne({
-      where: { id_Simulation: id },
-      include: [{
-        model: Exercice,
-        include: [{
-          model: Society,
-          include: [{
-            model: User,
-            where: { id_User: userId },
-            through: { attributes: [] }
-          }]
-        }]
-      }]
+      where: { id, userId }
     });
 
     if (!simulation) {
@@ -191,9 +143,42 @@ export const deleteSimulation = async (req, res) => {
 
     return res.json({ message: 'Simulation supprimée avec succès' });
   } catch (error) {
-    return res.status(500).json({
-      message: 'Erreur lors de la suppression de la simulation',
-      error: error.message
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
+  }
+};
+
+// Obtenir les statistiques pour le dashboard
+export const getDashboardStats = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const simulations = await Simulation.findAll({
+      where: { userId, statut: 'Terminée' }
     });
+
+    // Calculs simplifiés pour le dashboard
+    const totalSimulations = simulations.length;
+    const totalCA = simulations.reduce((sum, sim) => {
+      const ca = parseFloat(sim.ca?.replace(/[^0-9.-]+/g,"") || "0");
+      return sum + ca;
+    }, 0);
+    
+    const totalRevenuNet = simulations.reduce((sum, sim) => {
+      const revenu = parseFloat(sim.revenuNet?.replace(/[^0-9.-]+/g,"") || "0");
+      return sum + revenu;
+    }, 0);
+
+    const charges = totalCA - totalRevenuNet;
+    const tauxCharge = totalCA > 0 ? ((charges / totalCA) * 100).toFixed(1) : 0;
+
+    return res.json({
+      chiffreAffaire: `${totalCA.toLocaleString()} €`,
+      charge: `${charges.toLocaleString()} €`,
+      beneficeNet: `${totalRevenuNet.toLocaleString()} €`,
+      tauxCharge: `${tauxCharge}%`,
+      nombreSimulations: totalSimulations
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 }; 

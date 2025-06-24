@@ -3,26 +3,58 @@ import { Model, DataTypes } from 'sequelize';
 export default (sequelize) => {
   class Simulation extends Model {
     static associate(models) {
-      // Relations définies dans index.js
+      // Relations avec les autres modèles
+      Simulation.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'user'
+      });
+      
+      Simulation.hasMany(models.CategoriBudget, {
+        foreignKey: 'simulationId',
+        as: 'categories'
+      });
+      
+      Simulation.hasMany(models.OperatingCharges, {
+        foreignKey: 'simulationId',
+        as: 'operatingCharges'
+      });
+      
+      Simulation.hasOne(models.SimulationParameters, {
+        foreignKey: 'simulationId',
+        as: 'parameters'
+      });
+      
+      Simulation.hasOne(models.SimulationResults, {
+        foreignKey: 'simulationId',
+        as: 'results'
+      });
     }
   }
 
   Simulation.init(
     {
-      id_Simulation: {
+      id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true,
       },
-      CA_HT: { 
-        type: DataTypes.FLOAT, 
-        allowNull: true 
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'Nom de la simulation'
       },
+      userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id'
+        }
+      }
     },
     {
       sequelize,
       modelName: 'Simulation',
-      tableName: 'Simulations',
       timestamps: true,
     }
   );
