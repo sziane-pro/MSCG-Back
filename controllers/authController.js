@@ -7,7 +7,12 @@ const secretKey = process.env.JWT_SECRET || 'super_secret_key';
 // Inscription d'un utilisateur
 export const register = async (req, res) => {
   try {
-    const { login, password, name, email } = req.body;
+    const { email, password, firstname, lastname } = req.body;
+
+    // Validation des données requises
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email et mot de passe sont requis.' });
+    }
 
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await User.findOne({ where: { email } });
@@ -20,15 +25,32 @@ export const register = async (req, res) => {
 
     // Créer un nouvel utilisateur
     const newUser = await User.create({
-      login,
-      password: hashedPassword,
-      name,
       email,
+      password: hashedPassword,
+      firstname: firstname || null,
+      lastname: lastname || null
     });
 
-    return res.status(201).json({ message: 'Utilisateur créé avec succès.', userId: newUser.id });
+    // Générer le token JWT
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email }, 
+      secretKey, 
+      { expiresIn: '7d' }
+    );
+
+    return res.status(201).json({ 
+      message: 'Utilisateur créé avec succès.',
+      token,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstname: newUser.firstname,
+        lastname: newUser.lastname
+      }
+    });
   } catch (error) {
-    return res.status(500).json({ message: 'Erreur serveur', error });
+    console.error('Erreur inscription:', error);
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
@@ -36,6 +58,11 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    // Validation des données requises
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email et mot de passe sont requis.' });
+    }
 
     // Vérifier si l'utilisateur existe
     const user = await User.findOne({ where: { email } });
@@ -50,11 +77,25 @@ export const login = async (req, res) => {
     }
 
     // Générer le token JWT
-    const token = jwt.sign({ userId: user.id, email: user.email }, secretKey, { expiresIn: '7d' });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email }, 
+      secretKey, 
+      { expiresIn: '7d' }
+    );
 
-    return res.json({ message: 'Connexion réussie', token });
+    return res.json({ 
+      message: 'Connexion réussie', 
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstname: user.firstname,
+        lastname: user.lastname
+      }
+    });
   } catch (error) {
-    return res.status(500).json({ message: 'Erreur serveur', error });
+    console.error('Erreur connexion:', error);
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
@@ -69,8 +110,16 @@ export const getUserProfile = async (req, res) => {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
 
-    return res.json(user);
+    return res.json({
+      id: user.id,
+      email: user.email,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    });
   } catch (error) {
-    return res.status(500).json({ message: 'Erreur serveur', error });
+    console.error('Erreur profil utilisateur:', error);
+    return res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };

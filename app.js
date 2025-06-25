@@ -18,10 +18,6 @@ console.log('🛠 Tentative de connexion à la base de données...');
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Connexion à PostgreSQL réussie !');
-    return sequelize.sync();
-  })
-  .then(() => {
-    console.log('✅ Synchronisation des modèles réussie !');
   })
   .catch((error) => {
     console.error('❌ Erreur de connexion à la base de données:', error);
@@ -35,22 +31,12 @@ app.use('/api/simulations', simulationRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
-    message: 'MSCG Backend simplifié',
+    message: 'MSCG Backend',
     models: ['User', 'Simulation']
   });
 });
 
 const PORT = process.env.PORT || 5002;
 app.listen(PORT, () => {
-  console.log(`✅ Serveur MSCG simplifié démarré sur http://localhost:${PORT}`);
-  console.log('📋 Routes disponibles:');
-  console.log('   - POST /api/auth/register');
-  console.log('   - POST /api/auth/login');
-  console.log('   - GET  /api/auth/me');
-  console.log('   - GET  /api/simulations');
-  console.log('   - POST /api/simulations');
-  console.log('   - GET  /api/simulations/dashboard/stats');
-  console.log('   - GET  /api/simulations/:id');
-  console.log('   - PUT  /api/simulations/:id');
-  console.log('   - DELETE /api/simulations/:id');
+  console.log(`✅ Serveur MSCG démarré sur http://localhost:${PORT}`);
 });

@@ -17,14 +17,17 @@ router.use(authenticate);
 // Créer une nouvelle simulation
 router.post('/', createSimulation);
 
-// Obtenir toutes les simulations de l'utilisateur connecté
+// Obtenir toutes les simulations de l'utilisateur connecté (format tableau)
 router.get('/', getUserSimulations);
 
 // Obtenir les statistiques du dashboard
 router.get('/dashboard/stats', getDashboardStats);
 
-// Obtenir une simulation spécifique
+// Obtenir une simulation spécifique avec toutes ses données
 router.get('/:id', getSimulation);
+
+// Obtenir les données détaillées d'une simulation pour reconstituer le frontend
+router.get('/:id/details', getSimulation); // Même endpoint mais alias pour clarté
 
 // Mettre à jour une simulation
 router.put('/:id', updateSimulation);
