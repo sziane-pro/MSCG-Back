@@ -32,7 +32,7 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'MSCG Backend',
-    models: ['User', 'Simulation']
+    models: ['User', 'Simulation', 'SimulationResults']
   });
 });
 
