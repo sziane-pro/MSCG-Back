@@ -17,58 +17,6 @@ export default (sequelize) => {
         primaryKey: true,
         autoIncrement: true,
       },
-      
-      // Résultats principaux
-      totalMonthlyRevenue: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        comment: 'Revenu mensuel total nécessaire'
-      },
-      totalVitalCharges: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        comment: 'Total charges vitales'
-      },
-      totalComfortCharges: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        comment: 'Total charges confort'
-      },
-      totalOperatingCharges: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        comment: 'Total charges professionnelles'
-      },
-      
-      // Résultats itératifs (JSON pour les arrays)
-      iterativeChargesResults: {
-        type: DataTypes.JSON,
-        allowNull: false,
-        comment: 'Résultats charges par période (array)'
-      },
-      iterativeRevenueResults: {
-        type: DataTypes.JSON,
-        allowNull: false,
-        comment: 'Résultats revenus par période (array)'
-      },
-      iterativeSocialChargesResults: {
-        type: DataTypes.JSON,
-        allowNull: false,
-        comment: 'Résultats charges sociales par période (array)'
-      },
-      
-      // Résultats finaux
-      finalNetRevenue: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        comment: 'Revenu net final calculé'
-      },
-      finalGrossRevenue: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-        comment: 'Revenu brut final calculé'
-      },
-      
       simulationId: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -77,12 +25,69 @@ export default (sequelize) => {
           model: 'Simulations',
           key: 'id'
         }
+      },
+      totalMonthlyVital: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        comment: 'Total mensuel des charges vitales'
+      },
+      totalMonthlyComfortCharges: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        comment: 'Total mensuel des charges de confort'
+      },
+      totalMonthlyImprovedIncome: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        comment: 'Revenu mensuel amélioré total'
+      },
+      totalOperatingCharges: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        comment: 'Total des charges professionnelles'
+      },
+      breakevenThreshold: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        comment: 'Seuil de rentabilité'
+      },
+      microEnterpriseRevenue: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        comment: 'Revenu en micro-entreprise'
+      },
+      enterpriseRevenue: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00,
+        comment: 'Revenu en entreprise'
+      },
+      bestOption: {
+        type: DataTypes.STRING(15),
+        allowNull: false,
+        defaultValue: 'micro',
+        validate: {
+          isIn: [['micro', 'entreprise', 'egalite']]
+        },
+        comment: 'Meilleure option fiscale'
+      },
+      calculatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+        comment: 'Date de calcul des résultats'
       }
     },
     {
       sequelize,
       modelName: 'SimulationResults',
-      timestamps: true,
+      timestamps: false, // Pas de createdAt/updatedAt car on a calculatedAt
       indexes: [
         {
           fields: ['simulationId']

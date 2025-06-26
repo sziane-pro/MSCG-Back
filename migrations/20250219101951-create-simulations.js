@@ -5,15 +5,14 @@ export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('Simulations', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        autoIncrement: true,
+        allowNull: false
       },
       name: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        comment: 'Nom de la simulation'
+        type: Sequelize.STRING(255),
+        allowNull: false
       },
       userId: {
         type: Sequelize.INTEGER,
@@ -23,29 +22,27 @@ export default {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-        comment: 'Référence vers l\'utilisateur propriétaire'
+        onDelete: 'CASCADE'
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    // Ajouter index sur userId pour améliorer les performances des requêtes
+    // Créer l'index sur userId pour optimiser les requêtes
     await queryInterface.addIndex('Simulations', ['userId'], {
-      name: 'simulations_user_id_idx'
+      name: 'simulations_user_id_index'
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeIndex('Simulations', 'simulations_user_id_idx');
     await queryInterface.dropTable('Simulations');
   }
 }; 

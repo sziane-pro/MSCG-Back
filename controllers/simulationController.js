@@ -1,13 +1,10 @@
 import { 
   Simulation, 
   User, 
-  CategoriBudget, 
-  OperatingCharges, 
-  SimulationParameters, 
   SimulationResults 
 } from '../models/index.js';
 
-// Créer une nouvelle simulation complète
+// Créer une nouvelle simulation avec résultats
 export const createSimulation = async (req, res) => {
   const transaction = await Simulation.sequelize.transaction();
   
@@ -15,90 +12,50 @@ export const createSimulation = async (req, res) => {
     const userId = req.user.userId;
     const {
       name,
-      categories = [],           // Charges vitales
-      comfortCategories = [],    // Charges de confort
-      operatingCharges = [],     // Charges professionnelles
-      parameters = {},           // Paramètres temporels et charges sociales
-      results = {}               // Résultats calculés
+      totalMonthlyVital = 0,
+      totalMonthlyComfortCharges = 0,
+      totalMonthlyImprovedIncome = 0,
+      totalOperatingCharges = 0,
+      breakevenThreshold = 0,
+      microEnterpriseRevenue = 0,
+      enterpriseRevenue = 0,
+      bestOption = 'micro'
     } = req.body;
 
-    // Validation des données essentielles
-    if (!name) {
+    // Validation
+    if (!name || name.trim() === '') {
       return res.status(400).json({ message: 'Le nom de la simulation est requis.' });
     }
 
-    // 1. Créer la simulation principale
+    // Créer la simulation
     const simulation = await Simulation.create({
-      name,
+      name: name.trim(),
       userId
     }, { transaction });
 
-    // 2. Sauvegarder les catégories budgétaires (vitales)
-    if (categories.length > 0) {
-      const vitalCategories = categories.map(cat => ({
-        name: cat.name,
-        monthlyAmount: cat.monthly || 0,
-        categoryType: 'vital',
-        simulationId: simulation.id
-      }));
-      await CategoriBudget.bulkCreate(vitalCategories, { transaction });
-    }
-
-    // 3. Sauvegarder les catégories de confort
-    if (comfortCategories.length > 0) {
-      const comfortCategoriesData = comfortCategories.map(cat => ({
-        name: cat.name,
-        monthlyAmount: cat.monthly || 0,
-        categoryType: 'confort',
-        simulationId: simulation.id
-      }));
-      await CategoriBudget.bulkCreate(comfortCategoriesData, { transaction });
-    }
-
-    // 4. Sauvegarder les charges professionnelles
-    if (operatingCharges.length > 0) {
-      const operatingChargesData = operatingCharges.map(charge => ({
-        name: charge.name,
-        monthlyAmount: charge.monthly || 0,
-        simulationId: simulation.id
-      }));
-      await OperatingCharges.bulkCreate(operatingChargesData, { transaction });
-    }
-
-    // 5. Sauvegarder les paramètres de simulation
-    if (Object.keys(parameters).length > 0) {
-      await SimulationParameters.create({
-        timeHorizon: parameters.timeHorizon || 12,
-        adjustmentPeriod: parameters.adjustmentPeriod || 6,
-        growthRate: parameters.growthRate || 0,
-        coefficient: parameters.coefficient || 1.0,
-        socialChargesRate: parameters.socialChargesRate || 0.22,
-        socialChargesMaxBase: parameters.socialChargesMaxBase || 45000,
-        microBrutMarginRate: parameters.microBrutMarginRate || 0.30,
-        simulationId: simulation.id
-      }, { transaction });
-    }
-
-    // 6. Sauvegarder les résultats calculés
-    if (Object.keys(results).length > 0) {
-      await SimulationResults.create({
-        totalMonthlyRevenue: results.totalMonthlyRevenue || 0,
-        totalVitalCharges: results.totalVitalCharges || 0,
-        totalComfortCharges: results.totalComfortCharges || 0,
-        totalOperatingCharges: results.totalOperatingCharges || 0,
-        iterativeChargesResults: results.iterativeChargesResults || [],
-        iterativeRevenueResults: results.iterativeRevenueResults || [],
-        iterativeSocialChargesResults: results.iterativeSocialChargesResults || [],
-        finalNetRevenue: results.finalNetRevenue || 0,
-        finalGrossRevenue: results.finalGrossRevenue || 0,
-        simulationId: simulation.id
-      }, { transaction });
-    }
+    // Créer les résultats associés
+    const results = await SimulationResults.create({
+      simulationId: simulation.id,
+      totalMonthlyVital: parseFloat(totalMonthlyVital) || 0,
+      totalMonthlyComfortCharges: parseFloat(totalMonthlyComfortCharges) || 0,
+      totalMonthlyImprovedIncome: parseFloat(totalMonthlyImprovedIncome) || 0,
+      totalOperatingCharges: parseFloat(totalOperatingCharges) || 0,
+      breakevenThreshold: parseFloat(breakevenThreshold) || 0,
+      microEnterpriseRevenue: parseFloat(microEnterpriseRevenue) || 0,
+      enterpriseRevenue: parseFloat(enterpriseRevenue) || 0,
+      bestOption: bestOption || 'micro',
+      calculatedAt: new Date()
+    }, { transaction });
 
     await transaction.commit();
 
-    // Retourner la simulation créée avec toutes ses relations
-    const fullSimulation = await getFullSimulation(simulation.id);
+    // Retourner la simulation avec ses résultats
+    const fullSimulation = await Simulation.findByPk(simulation.id, {
+      include: [{
+        model: SimulationResults,
+        as: 'results'
+      }]
+    });
 
     return res.status(201).json({
       message: 'Simulation créée avec succès',
@@ -115,31 +72,29 @@ export const createSimulation = async (req, res) => {
   }
 };
 
-// Obtenir toutes les simulations de l'utilisateur connecté (format simplifié pour le tableau)
+// Obtenir toutes les simulations de l'utilisateur
 export const getUserSimulations = async (req, res) => {
   try {
     const userId = req.user.userId;
 
     const simulations = await Simulation.findAll({
       where: { userId },
-      include: [
-        {
-          model: SimulationResults,
-          as: 'results',
-          attributes: ['totalMonthlyRevenue', 'finalNetRevenue', 'finalGrossRevenue']
-        }
-      ],
+      include: [{
+        model: SimulationResults,
+        as: 'results'
+      }],
       order: [['createdAt', 'DESC']]
     });
 
-    // Formater pour le frontend (tableau des simulations)
+    // Formater pour le frontend
     const formattedSimulations = simulations.map(sim => ({
       id: sim.id,
-      nom: sim.name,  // Mapping nom → name pour compatibilité frontend
+      nom: sim.name,
       name: sim.name,
-      date: sim.createdAt.toISOString().split('T')[0], // Format YYYY-MM-DD
-      ca: sim.results ? `${Math.round(sim.results.finalGrossRevenue).toLocaleString()} €` : '-',
-      revenuNet: sim.results ? `${Math.round(sim.results.finalNetRevenue).toLocaleString()} €` : '-',
+      date: sim.createdAt.toISOString().split('T')[0],
+      ca: sim.results ? `${Math.round(sim.results.microEnterpriseRevenue).toLocaleString()} €` : '-',
+      revenuNet: sim.results ? `${Math.round(sim.results.totalMonthlyImprovedIncome).toLocaleString()} €` : '-',
+      bestOption: sim.results?.bestOption || 'micro',
       createdAt: sim.createdAt,
       updatedAt: sim.updatedAt
     }));
@@ -154,13 +109,19 @@ export const getUserSimulations = async (req, res) => {
   }
 };
 
-// Obtenir une simulation complète avec toutes ses données
+// Obtenir une simulation complète
 export const getSimulation = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
 
-    const simulation = await getFullSimulation(id, userId);
+    const simulation = await Simulation.findOne({
+      where: { id, userId },
+      include: [{
+        model: SimulationResults,
+        as: 'results'
+      }]
+    });
 
     if (!simulation) {
       return res.status(404).json({ message: 'Simulation non trouvée' });
@@ -183,9 +144,19 @@ export const updateSimulation = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.userId;
-    const updateData = req.body;
+    const {
+      name,
+      totalMonthlyVital,
+      totalMonthlyComfortCharges,
+      totalMonthlyImprovedIncome,
+      totalOperatingCharges,
+      breakevenThreshold,
+      microEnterpriseRevenue,
+      enterpriseRevenue,
+      bestOption
+    } = req.body;
 
-    // Vérifier que la simulation existe et appartient à l'utilisateur
+    // Vérifier que la simulation existe
     const simulation = await Simulation.findOne({
       where: { id, userId }
     });
@@ -195,89 +166,42 @@ export const updateSimulation = async (req, res) => {
       return res.status(404).json({ message: 'Simulation non trouvée' });
     }
 
-    // Mettre à jour le nom si fourni
-    if (updateData.name) {
-      await simulation.update({ name: updateData.name }, { transaction });
+    // Mettre à jour le nom de la simulation si fourni
+    if (name) {
+      await simulation.update({ name: name.trim() }, { transaction });
     }
 
-    // Mettre à jour les catégories si fournies
-    if (updateData.categories || updateData.comfortCategories) {
-      // Supprimer les anciennes catégories
-      await CategoriBudget.destroy({ 
-        where: { simulationId: id }, 
-        transaction 
-      });
+    // Mettre à jour les résultats s'ils existent
+    const results = await SimulationResults.findOne({
+      where: { simulationId: id }
+    });
 
-      // Recréer les catégories vitales
-      if (updateData.categories && updateData.categories.length > 0) {
-        const vitalCategories = updateData.categories.map(cat => ({
-          name: cat.name,
-          monthlyAmount: cat.monthly || 0,
-          categoryType: 'vital',
-          simulationId: id
-        }));
-        await CategoriBudget.bulkCreate(vitalCategories, { transaction });
+    if (results) {
+      const updateData = {};
+      if (totalMonthlyVital !== undefined) updateData.totalMonthlyVital = parseFloat(totalMonthlyVital);
+      if (totalMonthlyComfortCharges !== undefined) updateData.totalMonthlyComfortCharges = parseFloat(totalMonthlyComfortCharges);
+      if (totalMonthlyImprovedIncome !== undefined) updateData.totalMonthlyImprovedIncome = parseFloat(totalMonthlyImprovedIncome);
+      if (totalOperatingCharges !== undefined) updateData.totalOperatingCharges = parseFloat(totalOperatingCharges);
+      if (breakevenThreshold !== undefined) updateData.breakevenThreshold = parseFloat(breakevenThreshold);
+      if (microEnterpriseRevenue !== undefined) updateData.microEnterpriseRevenue = parseFloat(microEnterpriseRevenue);
+      if (enterpriseRevenue !== undefined) updateData.enterpriseRevenue = parseFloat(enterpriseRevenue);
+      if (bestOption !== undefined) updateData.bestOption = bestOption;
+
+      if (Object.keys(updateData).length > 0) {
+        updateData.calculatedAt = new Date();
+        await results.update(updateData, { transaction });
       }
-
-      // Recréer les catégories de confort
-      if (updateData.comfortCategories && updateData.comfortCategories.length > 0) {
-        const comfortCategoriesData = updateData.comfortCategories.map(cat => ({
-          name: cat.name,
-          monthlyAmount: cat.monthly || 0,
-          categoryType: 'confort',
-          simulationId: id
-        }));
-        await CategoriBudget.bulkCreate(comfortCategoriesData, { transaction });
-      }
-    }
-
-    // Mettre à jour les charges professionnelles si fournies
-    if (updateData.operatingCharges) {
-      await OperatingCharges.destroy({ 
-        where: { simulationId: id }, 
-        transaction 
-      });
-
-      if (updateData.operatingCharges.length > 0) {
-        const operatingChargesData = updateData.operatingCharges.map(charge => ({
-          name: charge.name,
-          monthlyAmount: charge.monthly || 0,
-          simulationId: id
-        }));
-        await OperatingCharges.bulkCreate(operatingChargesData, { transaction });
-      }
-    }
-
-    // Mettre à jour les paramètres si fournis
-    if (updateData.parameters) {
-      await SimulationParameters.destroy({ 
-        where: { simulationId: id }, 
-        transaction 
-      });
-
-      await SimulationParameters.create({
-        ...updateData.parameters,
-        simulationId: id
-      }, { transaction });
-    }
-
-    // Mettre à jour les résultats si fournis
-    if (updateData.results) {
-      await SimulationResults.destroy({ 
-        where: { simulationId: id }, 
-        transaction 
-      });
-
-      await SimulationResults.create({
-        ...updateData.results,
-        simulationId: id
-      }, { transaction });
     }
 
     await transaction.commit();
 
     // Retourner la simulation mise à jour
-    const updatedSimulation = await getFullSimulation(id);
+    const updatedSimulation = await Simulation.findByPk(id, {
+      include: [{
+        model: SimulationResults,
+        as: 'results'
+      }]
+    });
 
     return res.json({
       message: 'Simulation mise à jour avec succès',
@@ -296,8 +220,6 @@ export const updateSimulation = async (req, res) => {
 
 // Supprimer une simulation
 export const deleteSimulation = async (req, res) => {
-  const transaction = await Simulation.sequelize.transaction();
-  
   try {
     const { id } = req.params;
     const userId = req.user.userId;
@@ -307,17 +229,14 @@ export const deleteSimulation = async (req, res) => {
     });
 
     if (!simulation) {
-      await transaction.rollback();
       return res.status(404).json({ message: 'Simulation non trouvée' });
     }
 
-    // Les suppressions en cascade sont gérées par les contraintes FK
-    await simulation.destroy({ transaction });
-    await transaction.commit();
+    // La suppression en cascade va supprimer automatiquement les résultats
+    await simulation.destroy();
 
     return res.json({ message: 'Simulation supprimée avec succès' });
   } catch (error) {
-    await transaction.rollback();
     console.error('Erreur suppression simulation:', error);
     return res.status(500).json({ 
       message: 'Erreur serveur', 
@@ -326,90 +245,75 @@ export const deleteSimulation = async (req, res) => {
   }
 };
 
-// Obtenir les statistiques pour le dashboard
+// Obtenir les statistiques du dashboard
 export const getDashboardStats = async (req, res) => {
   try {
     const userId = req.user.userId;
 
     const simulations = await Simulation.findAll({
       where: { userId },
-      include: [
-        {
-          model: SimulationResults,
-          as: 'results',
-          attributes: ['finalGrossRevenue', 'finalNetRevenue', 'totalOperatingCharges']
-        }
-      ]
+      include: [{
+        model: SimulationResults,
+        as: 'results'
+      }]
     });
 
-    // Calculs basés sur les vraies données sauvegardées
-    const simulationsWithResults = simulations.filter(sim => sim.results);
-    const totalSimulations = simulationsWithResults.length;
-    
-    const totalCA = simulationsWithResults.reduce((sum, sim) => {
-      return sum + (sim.results.finalGrossRevenue || 0);
-    }, 0);
-    
-    const totalRevenuNet = simulationsWithResults.reduce((sum, sim) => {
-      return sum + (sim.results.finalNetRevenue || 0);
-    }, 0);
+    if (simulations.length === 0) {
+      return res.json({
+        chiffreAffaire: '0 €',
+        charge: '0 €',
+        beneficeNet: '0 €',
+        tauxCharge: '0%',
+        rawData: {
+          totalCA: 0,
+          totalCharges: 0,
+          totalRevenuNet: 0
+        }
+      });
+    }
 
-    const totalCharges = simulationsWithResults.reduce((sum, sim) => {
-      return sum + (sim.results.totalOperatingCharges || 0);
-    }, 0);
+    // Calculer les totaux
+    let totalCA = 0;
+    let totalCharges = 0;
+    let totalRevenuNet = 0;
 
-    const tauxCharge = totalCA > 0 ? ((totalCharges / totalCA) * 100).toFixed(1) : 0;
+    simulations.forEach(sim => {
+      if (sim.results) {
+        // Prendre le meilleur revenu (micro ou entreprise)
+        const bestRevenue = Math.max(
+          parseFloat(sim.results.microEnterpriseRevenue) || 0,
+          parseFloat(sim.results.enterpriseRevenue) || 0
+        );
+        totalCA += bestRevenue;
+        
+        const charges = (parseFloat(sim.results.totalMonthlyVital) || 0) + 
+                       (parseFloat(sim.results.totalMonthlyComfortCharges) || 0) + 
+                       (parseFloat(sim.results.totalOperatingCharges) || 0);
+        totalCharges += charges;
+        
+        totalRevenuNet += parseFloat(sim.results.totalMonthlyImprovedIncome) || 0;
+      }
+    });
+
+    const tauxCharge = totalCA > 0 ? (totalCharges / totalCA * 100) : 0;
 
     return res.json({
       chiffreAffaire: `${Math.round(totalCA).toLocaleString()} €`,
       charge: `${Math.round(totalCharges).toLocaleString()} €`,
       beneficeNet: `${Math.round(totalRevenuNet).toLocaleString()} €`,
-      tauxCharge: `${tauxCharge}%`,
-      nombreSimulations: totalSimulations,
-      // Statistiques détaillées pour graphiques
+      tauxCharge: `${tauxCharge.toFixed(1)}%`,
       rawData: {
-        totalCA,
-        totalRevenuNet,
-        totalCharges,
-        totalSimulations
+        totalCA: Math.round(totalCA),
+        totalCharges: Math.round(totalCharges),
+        totalRevenuNet: Math.round(totalRevenuNet)
       }
     });
+
   } catch (error) {
-    console.error('Erreur statistiques dashboard:', error);
+    console.error('Erreur stats dashboard:', error);
     return res.status(500).json({ 
       message: 'Erreur serveur', 
       error: error.message 
     });
   }
-};
-
-// Fonction utilitaire pour récupérer une simulation complète
-const getFullSimulation = async (simulationId, userId = null) => {
-  const whereClause = userId ? { id: simulationId, userId } : { id: simulationId };
-  
-  return await Simulation.findOne({
-    where: whereClause,
-    include: [
-      {
-        model: CategoriBudget,
-        as: 'categories',
-        attributes: ['id', 'name', 'monthlyAmount', 'categoryType']
-      },
-      {
-        model: OperatingCharges,
-        as: 'operatingCharges',
-        attributes: ['id', 'name', 'monthlyAmount']
-      },
-      {
-        model: SimulationParameters,
-        as: 'parameters',
-        attributes: { exclude: ['simulationId'] }
-      },
-      {
-        model: SimulationResults,
-        as: 'results',
-        attributes: { exclude: ['simulationId'] }
-      }
-    ]
-  });
 }; 

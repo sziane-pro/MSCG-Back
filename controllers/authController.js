@@ -9,9 +9,30 @@ export const register = async (req, res) => {
   try {
     const { email, password, firstname, lastname } = req.body;
 
-    // Validation des données requises
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email et mot de passe sont requis.' });
+    // Validation des données requises selon le MPD
+    if (!email || !password || !firstname || !lastname) {
+      return res.status(400).json({ 
+        message: 'Email, mot de passe, prénom et nom sont requis.' 
+      });
+    }
+
+    // Validation des tailles selon le MPD
+    if (firstname.length > 100) {
+      return res.status(400).json({ 
+        message: 'Le prénom ne peut pas dépasser 100 caractères.' 
+      });
+    }
+
+    if (lastname.length > 100) {
+      return res.status(400).json({ 
+        message: 'Le nom ne peut pas dépasser 100 caractères.' 
+      });
+    }
+
+    if (email.length > 255) {
+      return res.status(400).json({ 
+        message: 'L\'email ne peut pas dépasser 255 caractères.' 
+      });
     }
 
     // Vérifier si l'utilisateur existe déjà
@@ -25,10 +46,10 @@ export const register = async (req, res) => {
 
     // Créer un nouvel utilisateur
     const newUser = await User.create({
-      email,
+      email: email.trim(),
       password: hashedPassword,
-      firstname: firstname || null,
-      lastname: lastname || null
+      firstname: firstname.trim(),
+      lastname: lastname.trim()
     });
 
     // Générer le token JWT

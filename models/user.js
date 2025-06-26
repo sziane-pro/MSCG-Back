@@ -3,7 +3,7 @@ import { Model, DataTypes } from 'sequelize';
 export default (sequelize) => {
   class User extends Model {
     static associate(models) {
-      // Relation avec Simulation seulement
+      // Relation avec Simulation
       User.hasMany(models.Simulation, {
         foreignKey: 'userId',
         as: 'simulations'
@@ -19,7 +19,7 @@ export default (sequelize) => {
         autoIncrement: true,
       },
       email: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
         validate: {
@@ -27,16 +27,16 @@ export default (sequelize) => {
         }
       },
       password: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: false
       },
       firstname: {
-        type: DataTypes.STRING,
-        allowNull: true
+        type: DataTypes.STRING(100),
+        allowNull: false
       },
       lastname: {
-        type: DataTypes.STRING,
-        allowNull: true
+        type: DataTypes.STRING(100),
+        allowNull: false
       }
     },
     {

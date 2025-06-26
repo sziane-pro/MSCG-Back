@@ -3,27 +3,13 @@ import { Model, DataTypes } from 'sequelize';
 export default (sequelize) => {
   class Simulation extends Model {
     static associate(models) {
-      // Relations avec les autres modèles
+      // Relation avec User
       Simulation.belongsTo(models.User, {
         foreignKey: 'userId',
         as: 'user'
       });
       
-      Simulation.hasMany(models.CategoriBudget, {
-        foreignKey: 'simulationId',
-        as: 'categories'
-      });
-      
-      Simulation.hasMany(models.OperatingCharges, {
-        foreignKey: 'simulationId',
-        as: 'operatingCharges'
-      });
-      
-      Simulation.hasOne(models.SimulationParameters, {
-        foreignKey: 'simulationId',
-        as: 'parameters'
-      });
-      
+      // Relation avec SimulationResults
       Simulation.hasOne(models.SimulationResults, {
         foreignKey: 'simulationId',
         as: 'results'
@@ -39,7 +25,7 @@ export default (sequelize) => {
         autoIncrement: true,
       },
       name: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(255),
         allowNull: false,
         comment: 'Nom de la simulation'
       },

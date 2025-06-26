@@ -1,57 +1,47 @@
+import 'dotenv/config';
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
-import UserModel from './user.js';
-import SimulationModel from './simulation.js';
-import CategoriBudgetModel from './categoriBudget.js';
-import OperatingChargesModel from './operatingCharges.js';
-import SimulationParametersModel from './simulationParameters.js';
-import SimulationResultsModel from './simulationResults.js';
 
-dotenv.config();
-
+// Configuration de la base de données
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASS,
+  process.env.DB_NAME || 'mscg_db',
+  process.env.DB_USER || 'postgres',
+  process.env.DB_PASS || 'password',
   {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
-    logging: false,
+    logging: false, // Désactiver les logs SQL en production
   }
 );
 
-// Initialisation des modèles
-const User = UserModel(sequelize);
-const Simulation = SimulationModel(sequelize);
-const CategoriBudget = CategoriBudgetModel(sequelize);
-const OperatingCharges = OperatingChargesModel(sequelize);
-const SimulationParameters = SimulationParametersModel(sequelize);
-const SimulationResults = SimulationResultsModel(sequelize);
+// Import des modèles
+import userModel from './user.js';
+import simulationModel from './simulation.js';
+import simulationResultsModel from './simulationResults.js';
 
-// Création d'un objet models pour les associations
+// Initialisation des modèles
+const User = userModel(sequelize);
+const Simulation = simulationModel(sequelize);
+const SimulationResults = simulationResultsModel(sequelize);
+
+// Configuration des associations
 const models = {
   User,
   Simulation,
-  CategoriBudget,
-  OperatingCharges,
-  SimulationParameters,
   SimulationResults
 };
 
-// Définition des associations
+// Initialiser les associations
 Object.keys(models).forEach(modelName => {
   if (models[modelName].associate) {
     models[modelName].associate(models);
   }
 });
 
+// Export
 export { 
-  sequelize,
-  User,
-  Simulation,
-  CategoriBudget,
-  OperatingCharges,
-  SimulationParameters,
-  SimulationResults
+  sequelize, 
+  User, 
+  Simulation, 
+  SimulationResults 
 };

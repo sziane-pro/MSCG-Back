@@ -5,52 +5,48 @@ export default {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('Users', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        autoIncrement: true,
+        allowNull: false
       },
       email: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(255),
         allowNull: false,
-        unique: true,
-        validate: {
-          isEmail: true
-        }
+        unique: true
       },
       password: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(255),
         allowNull: false
       },
       firstname: {
-        type: Sequelize.STRING,
-        allowNull: true
+        type: Sequelize.STRING(100),
+        allowNull: false
       },
       lastname: {
-        type: Sequelize.STRING,
-        allowNull: true
+        type: Sequelize.STRING(100),
+        allowNull: false
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    // Ajouter index sur email pour améliorer les performances
+    // Créer l'index unique sur email
     await queryInterface.addIndex('Users', ['email'], {
-      unique: true,
-      name: 'users_email_unique_idx'
+      name: 'users_email_unique',
+      unique: true
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeIndex('Users', 'users_email_unique_idx');
     await queryInterface.dropTable('Users');
   }
 }; 
