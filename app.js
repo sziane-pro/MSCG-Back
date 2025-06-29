@@ -7,7 +7,7 @@ import { sequelize } from './models/index.js';
 import authRoutes from './routes/authRoutes.js';
 import simulationRoutes from './routes/simulationRoutes.js';
 
-console.log('🚀 Démarrage du serveur MSCG (version simplifiée)...');
+console.log('🚀 Démarrage du serveur MSCG ...');
 
 const app = express();
 app.use(express.json());
